@@ -1,22 +1,18 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useMemo, useEffect } from 'react'
 import { LayoutWrapper } from '@/components/layout/layout-wrapper'
 import { OutfitCard } from '@/components/outfits/outfit-card'
-import { Filter, ChevronDown, X } from 'lucide-react'
+import { Filter, X, SlidersHorizontal } from 'lucide-react'
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarProvider,
-  SidebarTrigger,
-  SidebarInset,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-} from '@/components/ui/sidebar'
-import { ScrollArea } from '@/components/ui/scroll-area'
-
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 // Sample data - will be replaced with Supabase queries
 const SAMPLE_OUTFITS = [
@@ -112,7 +108,49 @@ const PRICE_RANGES = [
   { label: 'Above $1000', min: 1000, max: Infinity },
 ]
 
+function FilterGroup({
+  label,
+  options,
+  selected,
+  onSelect,
+}: {
+  label: string
+  options: string[]
+  selected: string
+  onSelect: (v: string) => void
+}) {
+  return (
+    <div className="mb-8">
+      <p className="text-[10px] tracking-[0.3em] text-accent uppercase font-bold mb-3">{label}</p>
+      <div className="space-y-1">
+        {options.map((opt) => (
+          <button
+            key={opt}
+            onClick={() => onSelect(opt)}
+            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+              selected === opt
+                ? 'bg-accent text-accent-foreground font-medium shadow-sm'
+                : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+            }`}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function OutfitsPage() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Default sidebar open on desktop, closed on mobile
+  useEffect(() => {
+    const onResize = () => setSidebarOpen(window.innerWidth >= 768)
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
   const [selectedOccasion, setSelectedOccasion] = useState('All')
   const [selectedSeason, setSelectedSeason] = useState('All')
   const [selectedPriceRange, setSelectedPriceRange] = useState(0)
@@ -129,10 +167,10 @@ export default function OutfitsPage() {
     })
 
     switch (sortBy) {
-      case 'price-low': result.sort((a, b) => a.price - b.price); break;
-      case 'price-high': result.sort((a, b) => b.price - a.price); break;
-      case 'rating': result.sort((a, b) => b.rating - a.rating); break;
-      default: break;
+      case 'price-low': result.sort((a, b) => a.price - b.price); break
+      case 'price-high': result.sort((a, b) => b.price - a.price); break
+      case 'rating': result.sort((a, b) => b.rating - a.rating); break
+      default: break
     }
 
     return result
@@ -145,153 +183,200 @@ export default function OutfitsPage() {
     setFavorites(newFavorites)
   }
 
+  const hasActiveFilters =
+    selectedOccasion !== 'All' || selectedSeason !== 'All' || selectedPriceRange !== 0
+
+  const resetFilters = () => {
+    setSelectedOccasion('All')
+    setSelectedSeason('All')
+    setSelectedPriceRange(0)
+  }
+
   return (
     <LayoutWrapper>
-      <SidebarProvider>
-        <div className="flex min-h-screen w-full bg-background/50">
-          <Sidebar className="border-r border-border/20 glass" variant="floating">
-            <SidebarHeader className="p-6 border-b border-border/10">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-accent rounded-full flex items-center justify-center">
-                  <Filter className="w-4 h-4 text-accent-foreground" />
-                </div>
-                <h2 className="text-lg font-medium tracking-widest text-foreground uppercase">Refine</h2>
-              </div>
-            </SidebarHeader>
-            
-            <SidebarContent className="p-4">
-              <ScrollArea className="h-full pr-4">
-                <SidebarGroup>
-                  <SidebarGroupLabel className="text-[10px] tracking-[0.3em] text-accent uppercase font-bold mb-4">Occasion</SidebarGroupLabel>
-                  <SidebarGroupContent className="space-y-2">
-                    {OCCASIONS.map((occasion) => (
-                      <button
-                        key={occasion}
-                        onClick={() => setSelectedOccasion(occasion)}
-                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-300 ${
-                          selectedOccasion === occasion 
-                            ? 'bg-accent text-accent-foreground font-medium shadow-md' 
-                            : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                        }`}
-                      >
-                        {occasion}
-                      </button>
-                    ))}
-                  </SidebarGroupContent>
-                </SidebarGroup>
+      <div className="min-h-screen pt-24 bg-background">
 
-                <SidebarGroup className="mt-8">
-                  <SidebarGroupLabel className="text-[10px] tracking-[0.3em] text-accent uppercase font-bold mb-4">Season</SidebarGroupLabel>
-                  <SidebarGroupContent className="space-y-2">
-                    {SEASONS.map((season) => (
-                      <button
-                        key={season}
-                        onClick={() => setSelectedSeason(season)}
-                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-300 ${
-                          selectedSeason === season 
-                            ? 'bg-accent text-accent-foreground font-medium shadow-md' 
-                            : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                        }`}
-                      >
-                        {season}
-                      </button>
-                    ))}
-                  </SidebarGroupContent>
-                </SidebarGroup>
-
-                <SidebarGroup className="mt-8">
-                  <SidebarGroupLabel className="text-[10px] tracking-[0.3em] text-accent uppercase font-bold mb-4">Price Range</SidebarGroupLabel>
-                  <SidebarGroupContent className="space-y-2">
-                    {PRICE_RANGES.map((range, index) => (
-                      <button
-                        key={range.label}
-                        onClick={() => setSelectedPriceRange(index)}
-                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-300 ${
-                          selectedPriceRange === index 
-                            ? 'bg-accent text-accent-foreground font-medium shadow-md' 
-                            : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                        }`}
-                      >
-                        {range.label}
-                      </button>
-                    ))}
-                  </SidebarGroupContent>
-                </SidebarGroup>
-              </ScrollArea>
-            </SidebarContent>
-          </Sidebar>
-
-          <SidebarInset className="flex-1 bg-transparent">
-            <main className="p-6 lg:p-10">
-              {/* Header / Stats */}
-              <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
-                <div>
-                  <h1 className="text-4xl md:text-5xl font-light text-foreground tracking-tight mb-4">
-                    Curated <span className="text-accent italic font-serif">Outfits</span>
-                  </h1>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <SidebarTrigger className="hover:text-accent transition-colors">
-                      <div className="flex items-center gap-2">
-                        <Filter className="w-4 h-4" />
-                        <span>Filters</span>
-                      </div>
-                    </SidebarTrigger>
-                    <span className="w-1 h-1 bg-muted rounded-full"></span>
-                    <span>{filteredOutfits.length} unique styles found</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 glass-sm px-6 py-3 rounded-full border border-border/20">
-                  <span className="text-[10px] tracking-widest text-muted-foreground font-bold uppercase">Sort By</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="bg-transparent text-sm font-medium text-foreground outline-none cursor-pointer pr-4"
-                  >
-                    <option value="featured">Featured</option>
-                    <option value="newest">Newest</option>
-                    <option value="price-low">Price: Low to High</option>
-                    <option value="price-high">Price: High to Low</option>
-                    <option value="rating">Top Rated</option>
-                  </select>
+        {/* Page Header */}
+        <div className="px-6 lg:px-10 mb-8 w-full">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col gap-5 w-full"
+          >
+            {/* Title row */}
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+              <div>
+                <h1 className="text-4xl md:text-6xl font-light text-foreground tracking-tight mb-2">
+                  Curated <span className="text-accent italic font-serif">Outfits</span>
+                </h1>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <span>{filteredOutfits.length} styles found</span>
                 </div>
               </div>
 
-              {/* Masonry Grid */}
-              {filteredOutfits.length > 0 ? (
-                <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
-                  {filteredOutfits.map((outfit) => (
-                    <OutfitCard
-                      key={outfit.id}
-                      {...outfit}
-                      isFavorited={favorites.has(outfit.id)}
-                      onToggleFavorite={() => toggleFavorite(outfit.id)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-32 glass rounded-3xl border-dashed">
-                  <div className="w-16 h-16 bg-secondary/30 rounded-full flex items-center justify-center mb-6">
-                    <X className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                  <p className="text-xl text-muted-foreground font-light mb-8">No masterpieces found matching your search.</p>
-                  <button
-                    onClick={() => {
-                      setSelectedOccasion('All')
-                      setSelectedSeason('All')
-                      setSelectedPriceRange(0)
-                    }}
-                    className="btn-premium"
-                  >
-                    Reset All Filters
-                  </button>
-                </div>
+              {/* Sort Dropdown — Shadcn Select */}
+              <div className="flex items-center gap-3 self-start sm:self-auto">
+                <span className="text-[10px] tracking-[0.2em] text-accent uppercase font-semibold whitespace-nowrap hidden sm:inline">
+                  Sort
+                </span>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-[160px] rounded-xl border-border/30 bg-card/50 backdrop-blur-md text-sm font-medium shadow-sm hover:border-accent/40 transition-all duration-300 focus:ring-accent/30">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-border/20 bg-card/80 backdrop-blur-xl shadow-xl">
+                    <SelectGroup>
+                      <SelectItem value="featured">Featured</SelectItem>
+                      <SelectItem value="newest">Newest</SelectItem>
+                      <SelectItem value="price-low">Price: Low to High</SelectItem>
+                      <SelectItem value="price-high">Price: High to Low</SelectItem>
+                      <SelectItem value="rating">Top Rated</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Filter toggle bar */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-full border text-sm transition-all duration-200 ${
+                  sidebarOpen
+                    ? 'border-accent/50 text-accent bg-accent/5'
+                    : 'border-border/30 text-muted-foreground hover:text-accent hover:border-accent/30'
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span>{sidebarOpen ? 'Hide Filters' : 'Filters'}</span>
+                {hasActiveFilters && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
+                )}
+              </button>
+              {hasActiveFilters && (
+                <button
+                  onClick={resetFilters}
+                  className="text-xs text-muted-foreground hover:text-accent transition-colors flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" /> Clear filters
+                </button>
               )}
-            </main>
-          </SidebarInset>
+            </div>
+          </motion.div>
         </div>
-      </SidebarProvider>
-    </LayoutWrapper>
 
+        {/* Body: sidebar + grid side by side */}
+        <div className="flex items-start px-6 lg:px-10 gap-8">
+
+          {/* Collapsible Filter Sidebar */}
+          <AnimatePresence initial={false}>
+            {sidebarOpen && (
+              <motion.aside
+                key="filter-sidebar"
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 260, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+                className="flex-none overflow-hidden shrink-0"
+              >
+                <div className="sticky top-28 w-[260px] rounded-2xl border border-border/20 bg-card/40 backdrop-blur-xl p-6">
+                  {/* Sidebar header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-accent/15 border border-accent/20 flex items-center justify-center">
+                        <Filter className="w-4 h-4 text-accent" />
+                      </div>
+                      <span className="text-sm font-light tracking-[0.2em] uppercase text-foreground">
+                        Refine
+                      </span>
+                    </div>
+                    {hasActiveFilters && (
+                      <button
+                        onClick={resetFilters}
+                        className="text-xs text-muted-foreground hover:text-accent transition-colors flex items-center gap-1"
+                      >
+                        <X className="w-3 h-3" /> Clear
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="h-px bg-border/30 mb-6" />
+
+                  <FilterGroup
+                    label="Occasion"
+                    options={OCCASIONS}
+                    selected={selectedOccasion}
+                    onSelect={setSelectedOccasion}
+                  />
+                  <FilterGroup
+                    label="Season"
+                    options={SEASONS}
+                    selected={selectedSeason}
+                    onSelect={setSelectedSeason}
+                  />
+
+                  {/* Price Range */}
+                  <div>
+                    <p className="text-[10px] tracking-[0.3em] text-accent uppercase font-bold mb-3">
+                      Price Range
+                    </p>
+                    <div className="space-y-1">
+                      {PRICE_RANGES.map((range, index) => (
+                        <button
+                          key={range.label}
+                          onClick={() => setSelectedPriceRange(index)}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                            selectedPriceRange === index
+                              ? 'bg-accent text-accent-foreground font-medium shadow-sm'
+                              : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+                          }`}
+                        >
+                          {range.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </motion.aside>
+            )}
+          </AnimatePresence>
+
+          {/* Masonry Grid */}
+          <div className="flex-1 min-w-0">
+            {filteredOutfits.length > 0 ? (
+              <motion.div
+                layout
+                className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-5 space-y-5"
+              >
+                {filteredOutfits.map((outfit) => (
+                  <OutfitCard
+                    key={outfit.id}
+                    {...outfit}
+                    isFavorited={favorites.has(outfit.id)}
+                    onToggleFavorite={() => toggleFavorite(outfit.id)}
+                  />
+                ))}
+              </motion.div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-32 glass rounded-3xl border border-dashed border-border/30">
+                <div className="w-14 h-14 bg-secondary/30 rounded-full flex items-center justify-center mb-5">
+                  <X className="w-7 h-7 text-muted-foreground" />
+                </div>
+                <p className="text-lg text-muted-foreground font-light mb-6">
+                  No styles found matching your filters.
+                </p>
+                <button onClick={resetFilters} className="btn-premium text-sm">
+                  Reset All Filters
+                </button>
+              </div>
+            )}
+          </div>
+
+        </div>
+
+        {/* Bottom padding */}
+        <div className="h-24" />
+      </div>
+    </LayoutWrapper>
   )
 }

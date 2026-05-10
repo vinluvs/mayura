@@ -255,4 +255,14 @@
   .text-shadow-gold {
     text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
   }
+
+  @keyframes border-glare {
+    0% { transform: translateX(-100%); }
+    50% { transform: translateX(100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .animate-border-glare {
+    animation: border-glare 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
 }

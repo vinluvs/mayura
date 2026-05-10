@@ -42,13 +42,21 @@ export function Navbar() {
   }
 
   return (
-    <nav className="glass fixed top-0 left-0 right-0 z-50 border-b border-border/50">
+    <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-background/60 border-none">
+      {/* Golden Metallic Bottom Border with Glare */}
+      <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-accent/20 overflow-hidden">
+        {/* Metallic Base */}
+        <div className="absolute inset-0 gold-metallic opacity-60" />
+        {/* Animated Glare */}
+        <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/40 to-transparent w-[50%] -skew-x-12 animate-border-glare" />
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <img src="/mayura-logo.png" alt="Mayura" className="h-12 w-auto" />
-            <span className="hidden sm:inline text-xl font-light tracking-widest text-foreground">MAYURA</span>
+            <img src="/only mayura logo.png" alt="Mayura" className="h-20 w-auto" />
+            <span className="sm:inline text-xl font-light tracking-widest text-foreground">MAYURA</span>
           </Link>
 
           {/* Desktop Menu */}

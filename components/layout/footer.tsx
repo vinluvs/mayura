@@ -8,11 +8,12 @@ export function Footer() {
 
   return (
     <footer className="border-t border-border/50 mt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+      <div className="max-w-7xl mx-auto p-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
           <div>
-            <img src="/mayura-logo.png" alt="Mayura" className="h-10 w-auto mb-4" />
+            <img src="/only mayura logo.png" alt="Mayura" className="h-25 w-auto mb-4" />
+            <span className="sm:inline text-xl font-light tracking-widest text-foreground">MAYURA</span>
             <p className="text-sm text-muted-foreground tracking-wide">
               Elevate your style with curated fashion outfits. Wear your form.
             </p>
