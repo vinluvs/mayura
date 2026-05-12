@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Star, ArrowRight } from 'lucide-react'
 import { motion } from "framer-motion"
+import { useLooks } from '@/hooks/use-looks'
 
 const featuredOutfits = [
   {
@@ -40,6 +41,23 @@ const featuredOutfits = [
 ]
 
 export function FeaturedCollections() {
+  const { looks } = useLooks()
+  const liveFeatured = looks ? looks.filter(l => l.featured) : []
+  
+  const displayItems = (liveFeatured.length > 0 ? liveFeatured.slice(0, 4) : featuredOutfits).map(item => {
+    if ('title' in item) {
+      return {
+        id: item.id,
+        name: item.title || item.name,
+        price: item.price,
+        occasion: item.categories?.name || 'Curated',
+        image: item.model_image_url,
+        rating: 4.9,
+      }
+    }
+    return item
+  })
+
   return (
     <section className="py-32 px-4 bg-linear-to-b from-background via-secondary/5 to-background">
       <div className="max-w-7xl mx-auto">
@@ -70,7 +88,7 @@ export function FeaturedCollections() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {featuredOutfits.map((outfit, index) => (
+          {displayItems.map((outfit, index) => (
             <motion.div
               key={outfit.id}
               initial={{ opacity: 0, y: 30 }}

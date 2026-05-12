@@ -1,49 +1,27 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { LayoutWrapper } from '@/components/layout/layout-wrapper'
 import { Settings, Package, Heart, LogOut, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-
-const SAMPLE_ORDERS = [
-  {
-    id: 'ORD-001',
-    date: '2024-05-02',
-    total: 299,
-    status: 'Delivered',
-    items: 'Evening Elegance',
-  },
-  {
-    id: 'ORD-002',
-    date: '2024-04-28',
-    total: 199,
-    status: 'Processing',
-    items: 'Casual Chic',
-  },
-  {
-    id: 'ORD-003',
-    date: '2024-04-15',
-    total: 349,
-    status: 'Delivered',
-    items: 'Party Glamour',
-  },
-]
-
-const SAMPLE_FAVORITES = [
-  { id: '1', name: 'Evening Elegance', price: 299, image: '/placeholder.svg?height=200&width=200' },
-  { id: '2', name: 'Casual Chic', price: 199, image: '/placeholder.svg?height=200&width=200' },
-  { id: '3', name: 'Weekend Vibe', price: 179, image: '/placeholder.svg?height=200&width=200' },
-]
+import { useUser } from '@/hooks/use-user'
+import { useOrders } from '@/hooks/use-orders'
+import { useFavorites } from '@/hooks/use-favorites'
+import { useLooks } from '@/hooks/use-looks'
 
 type TabType = 'overview' | 'orders' | 'favorites' | 'settings'
 
 export default function AccountDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
-  const [user, setUser] = useState({ name: 'Sarah Johnson', email: 'sarah@example.com' })
   const router = useRouter()
   const supabase = createClient()
+
+  const { profile, session, isLoading: isUserLoading } = useUser()
+  const { orders, isLoading: isOrdersLoading } = useOrders()
+  const { favoriteIds, isLoading: isFavoritesLoading } = useFavorites()
+  const { looks, isLoading: isLooksLoading } = useLooks()
 
   const handleLogout = async () => {
     if (!supabase) {
@@ -58,16 +36,33 @@ export default function AccountDashboard() {
     router.push('/')
   }
 
+  const favoriteLooks = useMemo(() => {
+    return looks.filter((look) => favoriteIds.includes(look.id))
+  }, [looks, favoriteIds])
+
+  if (isUserLoading || !session) {
+    return (
+      <LayoutWrapper>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <p className="text-muted-foreground animate-pulse">Loading profile...</p>
+        </div>
+      </LayoutWrapper>
+    )
+  }
+
+  const userDisplayName = profile?.full_name || session.user.email?.split('@')[0] || 'User'
+  const userEmail = session.user.email || 'No email provided'
+
   return (
     <LayoutWrapper>
       <div className="min-h-screen bg-background">
         {/* Header */}
         <div className="border-b border-border/50 px-4 py-12 bg-secondary/30">
           <div className="max-w-7xl mx-auto">
-            <h1 className="text-5xl md:text-6xl font-light tracking-widest text-foreground mb-3">
+            <h1 className="text-5xl md:text-6xl font-light tracking-widest text-foreground mb-3 uppercase">
               MY ACCOUNT
             </h1>
-            <p className="text-muted-foreground">Welcome back, {user.name}!</p>
+            <p className="text-muted-foreground">Welcome back, {userDisplayName}!</p>
           </div>
         </div>
 
@@ -151,11 +146,11 @@ export default function AccountDashboard() {
                     <div className="space-y-4">
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">NAME</p>
-                        <p className="text-lg font-semibold text-foreground">{user.name}</p>
+                        <p className="text-lg font-semibold text-foreground">{userDisplayName}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">EMAIL</p>
-                        <p className="text-lg font-semibold text-foreground">{user.email}</p>
+                        <p className="text-lg font-semibold text-foreground">{userEmail}</p>
                       </div>
                       <button className="mt-6 px-6 py-2 border border-accent/30 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors font-semibold">
                         Edit Profile
@@ -166,15 +161,15 @@ export default function AccountDashboard() {
                   {/* Quick Stats */}
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="glass-sm p-6 rounded-2xl text-center">
-                      <p className="text-3xl font-light text-accent mb-2">3</p>
+                      <p className="text-3xl font-light text-accent mb-2">{orders.length}</p>
                       <p className="text-sm text-muted-foreground">Total Orders</p>
                     </div>
                     <div className="glass-sm p-6 rounded-2xl text-center">
-                      <p className="text-3xl font-light text-accent mb-2">3</p>
+                      <p className="text-3xl font-light text-accent mb-2">{favoriteIds.length}</p>
                       <p className="text-sm text-muted-foreground">Saved Items</p>
                     </div>
                     <div className="glass-sm p-6 rounded-2xl text-center">
-                      <p className="text-3xl font-light text-accent mb-2">2</p>
+                      <p className="text-3xl font-light text-accent mb-2">1</p>
                       <p className="text-sm text-muted-foreground">Addresses</p>
                     </div>
                   </div>
@@ -183,26 +178,33 @@ export default function AccountDashboard() {
                   <div className="glass-sm p-8 rounded-2xl">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-2xl font-light tracking-widest text-foreground">RECENT ORDERS</h3>
-                      <button onClick={() => setActiveTab('orders')} className="text-accent hover:underline text-sm font-semibold">
-                        View All
-                      </button>
+                      {orders.length > 0 && (
+                        <button onClick={() => setActiveTab('orders')} className="text-accent hover:underline text-sm font-semibold">
+                          View All
+                        </button>
+                      )}
                     </div>
-                    <div className="space-y-3">
-                      {SAMPLE_ORDERS.slice(0, 2).map((order) => (
-                        <div key={order.id} className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
-                          <div>
-                            <p className="font-semibold text-foreground">{order.id}</p>
-                            <p className="text-sm text-muted-foreground">{order.items}</p>
+                    
+                    {orders.length === 0 ? (
+                      <p className="text-muted-foreground text-sm">No orders yet.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {orders.slice(0, 2).map((order) => (
+                          <div key={order.id} className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
+                            <div>
+                              <p className="font-semibold text-foreground">{order.order_number}</p>
+                              <p className="text-sm text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-foreground">${order.total_amount}</p>
+                              <p className={`text-sm ${order.status === 'delivered' ? 'text-green-600' : 'text-blue-600'}`}>
+                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                              </p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-foreground">${order.total}</p>
-                            <p className={`text-sm ${order.status === 'Delivered' ? 'text-green-600' : 'text-blue-600'}`}>
-                              {order.status}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -211,30 +213,33 @@ export default function AccountDashboard() {
               {activeTab === 'orders' && (
                 <div className="glass-sm p-8 rounded-2xl">
                   <h2 className="text-2xl font-light tracking-widest text-foreground mb-6">ORDER HISTORY</h2>
-                  <div className="space-y-4">
-                    {SAMPLE_ORDERS.map((order) => (
-                      <Link key={order.id} href={`/account/orders/${order.id}`}>
-                        <div className="flex items-center justify-between p-6 border border-border/50 rounded-lg hover:bg-secondary/30 transition-colors cursor-pointer">
-                          <div>
-                            <p className="font-semibold text-foreground text-lg mb-2">{order.id}</p>
-                            <p className="text-muted-foreground">{order.items}</p>
-                            <p className="text-sm text-muted-foreground mt-2">{order.date}</p>
+                  {orders.length === 0 ? (
+                    <p className="text-muted-foreground">You haven't placed any orders yet.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {orders.map((order) => (
+                        <Link key={order.id} href={`/account/orders/${order.id}`}>
+                          <div className="flex items-center justify-between p-6 border border-border/50 rounded-lg hover:bg-secondary/30 transition-colors cursor-pointer">
+                            <div>
+                              <p className="font-semibold text-foreground text-lg mb-2">{order.order_number}</p>
+                              <p className="text-sm text-muted-foreground mt-2">{new Date(order.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-2xl font-light text-accent mb-2">${order.total_amount}</p>
+                              <p className={`text-sm font-semibold px-3 py-1 rounded-full inline-block ${
+                                order.status === 'delivered'
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
+                                  : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
+                              }`}>
+                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                              </p>
+                            </div>
+                            <ChevronRight className="w-5 h-5 text-muted-foreground ml-4" />
                           </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-light text-accent mb-2">${order.total}</p>
-                            <p className={`text-sm font-semibold px-3 py-1 rounded-full inline-block ${
-                              order.status === 'Delivered'
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
-                                : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
-                            }`}>
-                              {order.status}
-                            </p>
-                          </div>
-                          <ChevronRight className="w-5 h-5 text-muted-foreground ml-4" />
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -242,25 +247,29 @@ export default function AccountDashboard() {
               {activeTab === 'favorites' && (
                 <div>
                   <h2 className="text-2xl font-light tracking-widest text-foreground mb-6">SAVED OUTFITS</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {SAMPLE_FAVORITES.map((outfit) => (
-                      <Link key={outfit.id} href={`/outfits/${outfit.id}`}>
-                        <div className="group glass-sm overflow-hidden rounded-2xl hover:shadow-premium transition-all cursor-pointer">
-                          <div className="relative h-60 overflow-hidden bg-secondary/50">
-                            <img
-                              src={outfit.image}
-                              alt={outfit.name}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                            />
+                  {favoriteLooks.length === 0 ? (
+                    <p className="text-muted-foreground">You have no saved items yet.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {favoriteLooks.map((outfit) => (
+                        <Link key={outfit.id} href={`/outfits/${outfit.id}`}>
+                          <div className="group glass-sm overflow-hidden rounded-2xl hover:shadow-premium transition-all cursor-pointer">
+                            <div className="relative h-60 overflow-hidden bg-secondary/50">
+                              <img
+                                src={outfit.model_image_url || '/placeholder.svg?height=200&width=200'}
+                                alt={outfit.name}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                              />
+                            </div>
+                            <div className="p-4">
+                              <h3 className="text-lg font-semibold text-foreground mb-2">{outfit.name}</h3>
+                              <p className="text-2xl font-light text-accent">${outfit.price}</p>
+                            </div>
                           </div>
-                          <div className="p-4">
-                            <h3 className="text-lg font-semibold text-foreground mb-2">{outfit.name}</h3>
-                            <p className="text-2xl font-light text-accent">${outfit.price}</p>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -320,3 +329,4 @@ export default function AccountDashboard() {
     </LayoutWrapper>
   )
 }
+

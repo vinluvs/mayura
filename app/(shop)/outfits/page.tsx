@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useMemo, useEffect } from 'react'
 import { LayoutWrapper } from '@/components/layout/layout-wrapper'
 import { OutfitCard } from '@/components/outfits/outfit-card'
-import { Filter, X, SlidersHorizontal } from 'lucide-react'
+import { Filter, X, SlidersHorizontal, Loader2 } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -13,93 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useLooks } from '@/hooks/use-looks'
+import { useFavorites } from '@/hooks/use-favorites'
 
-// Sample data - will be replaced with Supabase queries
-const SAMPLE_OUTFITS = [
-  {
-    id: '1',
-    name: 'Royal Silk Collection',
-    price: 599,
-    occasion: 'Formal',
-    season: 'Summer',
-    image: 'https://images.unsplash.com/photo-1594465919760-441fe5908ab0?q=80&w=1000',
-    rating: 4.9,
-    reviews: 124,
-  },
-  {
-    id: '2',
-    name: 'Emerald Velvet Gown',
-    price: 899,
-    occasion: 'Party',
-    season: 'Winter',
-    image: 'https://images.unsplash.com/photo-1539109132382-381bb3f1c2b3?q=80&w=1000',
-    rating: 5.0,
-    reviews: 86,
-  },
-  {
-    id: '3',
-    name: 'Ivory Day Saree',
-    price: 299,
-    occasion: 'Casual',
-    season: 'Spring',
-    image: 'https://images.unsplash.com/photo-1583391733956-6c78276477e2?q=80&w=1000',
-    rating: 4.7,
-    reviews: 54,
-  },
-  {
-    id: '4',
-    name: 'Midnight Gold Lehenga',
-    price: 1299,
-    occasion: 'Formal',
-    season: 'Winter',
-    image: 'https://images.unsplash.com/photo-1599032909756-5dee8c9583d1?q=80&w=1000',
-    rating: 4.9,
-    reviews: 210,
-  },
-  {
-    id: '5',
-    name: 'Summer Petal Anarkali',
-    price: 450,
-    occasion: 'Casual',
-    season: 'Summer',
-    image: 'https://images.unsplash.com/photo-1610030469983-98e55ec2999e?q=80&w=1000',
-    rating: 4.8,
-    reviews: 92,
-  },
-  {
-    id: '6',
-    name: 'Ruby Evening Wrap',
-    price: 350,
-    occasion: 'Party',
-    season: 'Autumn',
-    image: 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?q=80&w=1000',
-    rating: 4.6,
-    reviews: 43,
-  },
-  {
-    id: '7',
-    name: 'Cerulean Dream Drape',
-    price: 680,
-    occasion: 'Formal',
-    season: 'Spring',
-    image: 'https://images.unsplash.com/photo-1518732714860-b62714ce0c59?q=80&w=1000',
-    rating: 4.9,
-    reviews: 115,
-  },
-  {
-    id: '8',
-    name: 'Tuscan Sun Kurta',
-    price: 180,
-    occasion: 'Casual',
-    season: 'Summer',
-    image: 'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?q=80&w=1000',
-    rating: 4.5,
-    reviews: 67,
-  },
-]
-
-const OCCASIONS = ['All', 'Casual', 'Formal', 'Party']
-const SEASONS = ['All', 'Spring', 'Summer', 'Autumn', 'Winter']
 const PRICE_RANGES = [
   { label: 'All Prices', min: 0, max: Infinity },
   { label: 'Under $300', min: 0, max: 300 },
@@ -151,45 +67,62 @@ export default function OutfitsPage() {
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
-  const [selectedOccasion, setSelectedOccasion] = useState('All')
-  const [selectedSeason, setSelectedSeason] = useState('All')
+  
+  const [selectedCategory, setSelectedCategory] = useState('All')
   const [selectedPriceRange, setSelectedPriceRange] = useState(0)
   const [sortBy, setSortBy] = useState('featured')
-  const [favorites, setFavorites] = useState<Set<string>>(new Set())
+
+  // Real data hooks
+  const { looks, isLoading, error } = useLooks()
+  const { favoriteIds, toggleFavorite } = useFavorites()
+
+  // Dynamically extract categories from available looks
+  const categories = useMemo(() => {
+    const uniqueCategories = new Set<string>()
+    looks.forEach(look => {
+      if (look.categories?.name) {
+        uniqueCategories.add(look.categories.name)
+      }
+    })
+    return ['All', ...Array.from(uniqueCategories)]
+  }, [looks])
 
   const filteredOutfits = useMemo(() => {
-    let result = SAMPLE_OUTFITS.filter((outfit) => {
-      const occasionMatch = selectedOccasion === 'All' || outfit.occasion === selectedOccasion
-      const seasonMatch = selectedSeason === 'All' || outfit.season === selectedSeason
+    let result = looks.filter((outfit) => {
+      const categoryMatch = selectedCategory === 'All' || outfit.categories?.name === selectedCategory
       const priceRange = PRICE_RANGES[selectedPriceRange]
       const priceMatch = outfit.price >= priceRange.min && outfit.price <= priceRange.max
-      return occasionMatch && seasonMatch && priceMatch
+      return categoryMatch && priceMatch
     })
 
     switch (sortBy) {
       case 'price-low': result.sort((a, b) => a.price - b.price); break
       case 'price-high': result.sort((a, b) => b.price - a.price); break
-      case 'rating': result.sort((a, b) => b.rating - a.rating); break
+      case 'newest': result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); break
+      // 'featured' naturally defaults to whatever order they are fetched, but we can prioritize featured flag
+      case 'featured': result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0)); break
       default: break
     }
 
     return result
-  }, [selectedOccasion, selectedSeason, selectedPriceRange, sortBy])
-
-  const toggleFavorite = (id: string) => {
-    const newFavorites = new Set(favorites)
-    if (newFavorites.has(id)) newFavorites.delete(id)
-    else newFavorites.add(id)
-    setFavorites(newFavorites)
-  }
+  }, [looks, selectedCategory, selectedPriceRange, sortBy])
 
   const hasActiveFilters =
-    selectedOccasion !== 'All' || selectedSeason !== 'All' || selectedPriceRange !== 0
+    selectedCategory !== 'All' || selectedPriceRange !== 0
 
   const resetFilters = () => {
-    setSelectedOccasion('All')
-    setSelectedSeason('All')
+    setSelectedCategory('All')
     setSelectedPriceRange(0)
+  }
+
+  if (error) {
+    return (
+      <LayoutWrapper>
+        <div className="min-h-screen pt-32 px-6 flex justify-center text-center">
+          <p className="text-red-500">Failed to load outfits. Please try again later.</p>
+        </div>
+      </LayoutWrapper>
+    )
   }
 
   return (
@@ -211,7 +144,7 @@ export default function OutfitsPage() {
                   Curated <span className="text-accent italic font-serif">Outfits</span>
                 </h1>
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <span>{filteredOutfits.length} styles found</span>
+                  <span>{isLoading ? 'Loading...' : `${filteredOutfits.length} styles found`}</span>
                 </div>
               </div>
 
@@ -230,7 +163,6 @@ export default function OutfitsPage() {
                       <SelectItem value="newest">Newest</SelectItem>
                       <SelectItem value="price-low">Price: Low to High</SelectItem>
                       <SelectItem value="price-high">Price: High to Low</SelectItem>
-                      <SelectItem value="rating">Top Rated</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -303,16 +235,10 @@ export default function OutfitsPage() {
                   <div className="h-px bg-border/30 mb-6" />
 
                   <FilterGroup
-                    label="Occasion"
-                    options={OCCASIONS}
-                    selected={selectedOccasion}
-                    onSelect={setSelectedOccasion}
-                  />
-                  <FilterGroup
-                    label="Season"
-                    options={SEASONS}
-                    selected={selectedSeason}
-                    onSelect={setSelectedSeason}
+                    label="Category"
+                    options={categories}
+                    selected={selectedCategory}
+                    onSelect={setSelectedCategory}
                   />
 
                   {/* Price Range */}
@@ -343,7 +269,11 @@ export default function OutfitsPage() {
 
           {/* Masonry Grid */}
           <div className="flex-1 min-w-0">
-            {filteredOutfits.length > 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center items-center py-32">
+                <Loader2 className="w-8 h-8 text-accent animate-spin" />
+              </div>
+            ) : filteredOutfits.length > 0 ? (
               <motion.div
                 layout
                 className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-5 space-y-5"
@@ -351,8 +281,15 @@ export default function OutfitsPage() {
                 {filteredOutfits.map((outfit) => (
                   <OutfitCard
                     key={outfit.id}
-                    {...outfit}
-                    isFavorited={favorites.has(outfit.id)}
+                    id={outfit.id}
+                    name={outfit.title || outfit.name}
+                    price={outfit.price}
+                    occasion={outfit.categories?.name || 'Outfit'}
+                    season={outfit.categories?.name || ''}
+                    image={outfit.model_image_url}
+                    rating={5.0} // Fallback until ratings table is used for aggregation
+                    reviews={0}
+                    isFavorited={favoriteIds.includes(outfit.id)}
                     onToggleFavorite={() => toggleFavorite(outfit.id)}
                   />
                 ))}
@@ -380,3 +317,4 @@ export default function OutfitsPage() {
     </LayoutWrapper>
   )
 }
+

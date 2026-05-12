@@ -2,56 +2,47 @@
 
 import Link from 'next/link'
 import { LayoutWrapper } from '@/components/layout/layout-wrapper'
-import { Trash2, Plus, Minus, ChevronRight } from 'lucide-react'
+import { Trash2, Plus, Minus, ChevronRight, Loader2 } from 'lucide-react'
 import { useState } from 'react'
-
-interface CartItem {
-  id: string
-  type: 'outfit' | 'product'
-  name: string
-  price: number
-  quantity: number
-  image: string
-}
-
-const SAMPLE_CART_ITEMS: CartItem[] = [
-  {
-    id: '1',
-    type: 'outfit',
-    name: 'Evening Elegance Outfit',
-    price: 299,
-    quantity: 1,
-    image: '/placeholder.svg?height=150&width=150',
-  },
-  {
-    id: '2',
-    type: 'product',
-    name: 'Silk Evening Gown',
-    price: 189,
-    quantity: 2,
-    image: '/placeholder.svg?height=150&width=150',
-  },
-]
+import { useCart } from '@/hooks/use-cart'
 
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState<CartItem[]>(SAMPLE_CART_ITEMS)
+  const { items, isLoading, updateQuantity, removeFromCart } = useCart()
   const [promoCode, setPromoCode] = useState('')
+  const [isUpdating, setIsUpdating] = useState<string | null>(null)
 
-  const updateQuantity = (id: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      removeItem(id)
-    } else {
-      setCartItems((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, quantity: newQuantity } : item))
-      )
+  const handleUpdateQuantity = async (id: string | undefined, newQuantity: number) => {
+    if (!id) return
+    setIsUpdating(id)
+    try {
+      await updateQuantity(id, newQuantity)
+    } catch (error) {
+      console.error('Failed to update quantity', error)
+    } finally {
+      setIsUpdating(null)
     }
   }
 
-  const removeItem = (id: string) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== id))
+  const handleRemoveItem = async (id: string | undefined) => {
+    if (!id) return
+    setIsUpdating(id)
+    try {
+      await removeFromCart(id)
+    } catch (error) {
+      console.error('Failed to remove item', error)
+    } finally {
+      setIsUpdating(null)
+    }
   }
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  // Calculate live totals
+  const subtotal = items.reduce((sum, item) => {
+    const price = item.item_type === 'product'
+      ? item.product?.price || 0
+      : item.look?.price || item.look?.pricing?.total || item.look?.look_items?.reduce((s: number, li: any) => s + (li.products?.price || 0), 0) || 0
+    return sum + (price * item.quantity)
+  }, 0)
+
   const shipping = subtotal > 0 ? 15 : 0
   const tax = subtotal > 0 ? Math.round(subtotal * 0.1 * 100) / 100 : 0
   const total = subtotal + shipping + tax
@@ -74,69 +65,94 @@ export default function CartPage() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 py-8">
-          {cartItems.length > 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center py-32">
+              <Loader2 className="w-8 h-8 animate-spin text-accent" />
+            </div>
+          ) : items.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Cart Items */}
               <div className="lg:col-span-2">
                 <div className="space-y-4">
-                  {cartItems.map((item) => (
-                    <div key={item.id} className="glass-sm p-6 rounded-2xl flex gap-6">
-                      {/* Image */}
-                      <div className="w-32 h-32 bg-secondary/50 rounded-xl overflow-hidden flex-shrink-0">
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
+                  {items.map((item) => {
+                    const isProduct = item.item_type === 'product'
+                    const name = isProduct 
+                      ? item.product?.name || 'Product Item' 
+                      : item.look?.title || item.look?.name || 'Curated Look'
+                    
+                    const price = isProduct
+                      ? item.product?.price || 0
+                      : item.look?.price || item.look?.pricing?.total || item.look?.look_items?.reduce((s: number, li: any) => s + (li.products?.price || 0), 0) || 0
 
-                      {/* Details */}
-                      <div className="flex-1 flex flex-col justify-between">
-                        <div>
-                          <p className="text-xs tracking-widest text-accent mb-1 uppercase">{item.type}</p>
-                          <h3 className="text-lg font-semibold text-foreground mb-2">{item.name}</h3>
-                          <p className="text-2xl font-light text-accent">${item.price}</p>
+                    const image = isProduct
+                      ? item.product?.image_url || item.product?.images?.[0] || '/placeholder.svg?height=150&width=150'
+                      : item.look?.model_image_url || '/placeholder.svg?height=150&width=150'
+
+                    const itemDisabled = isUpdating === item.id
+
+                    return (
+                      <div key={item.id || Math.random()} className={`glass-sm p-6 rounded-2xl flex gap-6 transition-opacity ${itemDisabled ? 'opacity-50' : ''}`}>
+                        {/* Image */}
+                        <div className="w-32 h-32 bg-secondary/50 rounded-xl overflow-hidden shrink-0">
+                          <img
+                            src={image}
+                            alt={name}
+                            className="w-full h-full object-cover"
+                          />
                         </div>
 
-                        {/* Quantity Controls */}
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              className="p-1 hover:bg-secondary/50 rounded transition-colors"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                            <input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 1)}
-                              className="w-12 text-center border border-border/50 rounded-lg py-1 bg-transparent"
-                            />
-                            <button
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              className="p-1 hover:bg-secondary/50 rounded transition-colors"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
+                        {/* Details */}
+                        <div className="flex-1 flex flex-col justify-between min-w-0">
+                          <div>
+                            <p className="text-xs tracking-widest text-accent mb-1 uppercase">{item.item_type}</p>
+                            <h3 className="text-lg font-semibold text-foreground mb-1 truncate">{name}</h3>
+                            <div className="flex gap-3 text-xs text-muted-foreground mb-2">
+                              {item.size && <span>Size: {item.size}</span>}
+                              {item.color && <span>Color: {item.color}</span>}
+                            </div>
+                            <p className="text-2xl font-light text-accent">${price}</p>
                           </div>
 
-                          <button
-                            onClick={() => removeItem(item.id)}
-                            className="ml-auto p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded transition-colors"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+                          {/* Quantity Controls */}
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                                disabled={itemDisabled}
+                                className="p-1 hover:bg-secondary/50 rounded transition-colors disabled:cursor-not-allowed"
+                              >
+                                <Minus className="w-4 h-4" />
+                              </button>
+                              <span className="w-8 text-center font-medium">
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                                disabled={itemDisabled}
+                                className="p-1 hover:bg-secondary/50 rounded transition-colors disabled:cursor-not-allowed"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            <button
+                              onClick={() => handleRemoveItem(item.id)}
+                              disabled={itemDisabled}
+                              className="ml-auto p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded transition-colors disabled:cursor-not-allowed"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Item Total */}
+                        <div className="text-right flex flex-col justify-between shrink-0">
+                          <p className="text-sm text-muted-foreground">Item Total</p>
+                          <p className="text-2xl font-light text-foreground">${(price * item.quantity).toFixed(2)}</p>
                         </div>
                       </div>
-
-                      {/* Item Total */}
-                      <div className="text-right flex flex-col justify-between">
-                        <p className="text-sm text-muted-foreground">Item Total</p>
-                        <p className="text-2xl font-light text-foreground">${(item.price * item.quantity).toFixed(2)}</p>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 {/* Continue Shopping */}
@@ -164,7 +180,7 @@ export default function CartPage() {
                         placeholder="Enter code"
                         value={promoCode}
                         onChange={(e) => setPromoCode(e.target.value)}
-                        className="flex-1 px-4 py-2 border border-border/50 rounded-lg bg-transparent text-sm"
+                        className="flex-1 px-4 py-2 border border-border/50 rounded-lg bg-transparent text-sm text-foreground"
                       />
                       <button className="px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors font-semibold">
                         Apply
@@ -202,9 +218,12 @@ export default function CartPage() {
                       Proceed to Checkout
                     </Link>
 
-                    <button className="w-full px-8 py-4 border border-accent/30 rounded-lg font-semibold hover:bg-accent/5 transition-all duration-300">
+                    <Link
+                      href="/outfits"
+                      className="w-full block text-center px-8 py-4 border border-accent/30 rounded-lg font-semibold hover:bg-accent/5 transition-all duration-300"
+                    >
                       Continue Shopping
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>
