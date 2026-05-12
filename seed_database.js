@@ -1,8 +1,8 @@
 const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
-  'https://ccydsiptnibbraiydywy.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjeWRzaXB0bmliYnJhaXlkeXd5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2OTc4MzEwOSwiZXhwIjoyMDg1MzU5MTA5fQ.lI6kCqCxVN1TzG3eskNrrDdQskiA02l4pogAgNf_RqE',
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
@@ -37,11 +37,11 @@ async function seed() {
     // Formal Look Products
     { name: 'Velour Tailored Blazer', description: 'Premium structured velour blazer with gold accents.', price: 180, discount_percentage: 0, image_url: 'https://images.unsplash.com/photo-1594465919760-441fe5908ab0?q=80&w=1000', category_id: catMap['formal'], size_options: ['S', 'M', 'L', 'XL'], color_options: ['Midnight Black', 'Imperial Blue'], in_stock: true },
     { name: 'Silk Charmeuse Trousers', description: 'High-waisted wide leg trousers in pure silk.', price: 119, discount_percentage: 0, image_url: 'https://images.unsplash.com/photo-1594465919760-441fe5908ab0?q=80&w=1000', category_id: catMap['formal'], size_options: ['S', 'M', 'L'], color_options: ['Midnight Black'], in_stock: true },
-    
+
     // Casual Look Products
     { name: 'Linen Artisan Tunic', description: 'Breathable longline tunic woven from organic premium linen.', price: 89, discount_percentage: 0, image_url: 'https://images.unsplash.com/photo-1539109132382-381bb3f1c2b3?q=80&w=1000', category_id: catMap['casual'], size_options: ['XS', 'S', 'M', 'L'], color_options: ['Ivory White', 'Desert Sage'], in_stock: true },
     { name: 'Classic Suede Loafers', description: 'Handcrafted unlined suede loafers for superior comfort.', price: 110, discount_percentage: 0, image_url: 'https://images.unsplash.com/photo-1539109132382-381bb3f1c2b3?q=80&w=1000', category_id: catMap['casual'], size_options: ['8', '9', '10', '11'], color_options: ['Sand', 'Chestnut'], in_stock: true },
-    
+
     // Party Look Products
     { name: 'Aura Sequined Gown', description: 'Floor-sweeping mesh gown adorned with reflective micropieces.', price: 249, discount_percentage: 0, image_url: 'https://images.unsplash.com/photo-1583391733956-6c78276477e2?q=80&w=1000', category_id: catMap['party'], size_options: ['XS', 'S', 'M'], color_options: ['Rose Gold', 'Obsidian'], in_stock: true },
     { name: 'Chandelier Crystal Cascade Earrings', description: 'Dangling cascade statement pieces with authentic cut glass.', price: 100, discount_percentage: 0, image_url: 'https://images.unsplash.com/photo-1583391733956-6c78276477e2?q=80&w=1000', category_id: catMap['party'], size_options: ['One Size'], color_options: ['Gold/Clear'], in_stock: true },
