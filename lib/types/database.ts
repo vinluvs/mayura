@@ -51,6 +51,7 @@ export interface Database {
           category_id: string
           size_options: string[] | null
           color_options: string[] | null
+          gender: string | null
           in_stock: boolean
           created_at: string
           updated_at: string
@@ -65,6 +66,7 @@ export interface Database {
           category_id: string
           size_options?: string[] | null
           color_options?: string[] | null
+          gender?: string | null
           in_stock?: boolean
           created_at?: string
           updated_at?: string
@@ -78,6 +80,7 @@ export interface Database {
           category_id?: string
           size_options?: string[] | null
           color_options?: string[] | null
+          gender?: string | null
           in_stock?: boolean
           updated_at?: string
         }
@@ -91,6 +94,7 @@ export interface Database {
           category_id: string
           model_image_url: string
           background_color: string
+          gender: string | null
           featured: boolean
           created_at: string
           updated_at: string
@@ -103,6 +107,7 @@ export interface Database {
           category_id: string
           model_image_url: string
           background_color?: string
+          gender?: string | null
           featured?: boolean
           created_at?: string
           updated_at?: string
@@ -114,6 +119,7 @@ export interface Database {
           category_id?: string
           model_image_url?: string
           background_color?: string
+          gender?: string | null
           featured?: boolean
           updated_at?: string
         }

@@ -8,6 +8,17 @@ type Category = Database['public']['Tables']['categories']['Row']
 export interface LookWithCategory extends Look {
   categories: Category | null
   price: number
+  gender: string | null
+}
+
+function inferGender(look: any): string {
+  const titleLower = (look?.title || look?.name || '').toLowerCase()
+  if (titleLower.includes('sherwani') || titleLower.includes('groom') || titleLower.includes('men') || titleLower.includes('weekend vibe')) {
+    return 'Male'
+  } else if (titleLower.includes('gown') || titleLower.includes('saree') || titleLower.includes('lehenga') || titleLower.includes('bride') || titleLower.includes('women') || titleLower.includes('party glamour')) {
+    return 'Female'
+  }
+  return 'Unisex'
 }
 
 export function useLooks() {
@@ -31,9 +42,10 @@ export function useLooks() {
       `)
 
     if (error) throw error
-    
+
     return data.map((look: any) => ({
       ...look,
+      gender: look.gender || inferGender(look),
       price: look.look_items?.reduce((total: number, item: any) => total + (item.products?.price || 0), 0) || 0
     })) as LookWithCategory[]
   }
@@ -74,7 +86,10 @@ export function useLook(id: string) {
       .single()
 
     if (error) throw error
-    return data
+    return {
+      ...data,
+      gender: data.gender || inferGender(data)
+    }
   }
 
   const { data, error, isLoading, mutate } = useSWR(id ? `look-${id}` : null, fetcher)

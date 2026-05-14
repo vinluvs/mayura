@@ -55,6 +55,7 @@ Individual fashion items that exist only within looks.
 - `category_id` (uuid, FK) - Reference to categories
 - `size_options` (text[]) - Available sizes (e.g., ['XS', 'S', 'M', 'L', 'XL'])
 - `color_options` (text[]) - Available colors
+- `gender` (text) - Gender category ('Male', 'Female', 'Unisex')
 - `in_stock` (boolean, DEFAULT: true)
 - `created_at`, `updated_at` (timestamps)
 
@@ -75,6 +76,7 @@ Collections of products forming complete fashion looks.
 - `category_id` (uuid, FK) - Reference to categories
 - `model_image_url` (text) - Hero image showing the complete look
 - `background_color` (text, DEFAULT: '#F5F5F0')
+- `gender` (text) - Gender category ('Male', 'Female', 'Unisex')
 - `featured` (boolean) - Whether look is featured on home page
 - `created_at`, `updated_at` (timestamps)
 
