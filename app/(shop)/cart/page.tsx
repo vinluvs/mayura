@@ -37,9 +37,16 @@ export default function CartPage() {
 
   // Calculate live totals
   const subtotal = items.reduce((sum, item) => {
-    const price = item.item_type === 'product'
-      ? item.product?.price || 0
-      : item.look?.price || item.look?.pricing?.total || item.look?.look_items?.reduce((s: number, li: any) => s + (li.products?.price || 0), 0) || 0
+    let price = 0
+    if (item.item_type === 'product') {
+      price = item.product?.price || 0
+    } else {
+      const basePrice = item.look?.look_items?.reduce((s: number, li: any) => s + (li.products?.price || 0), 0) || 0
+      const discountPct = item.look?.discount || 0
+      price = discountPct > 0 
+        ? Math.round(basePrice * (1 - discountPct / 100) * 100) / 100 
+        : basePrice
+    }
     return sum + (price * item.quantity)
   }, 0)
 
@@ -80,13 +87,20 @@ export default function CartPage() {
                       ? item.product?.name || 'Product Item' 
                       : item.look?.title || item.look?.name || 'Curated Look'
                     
-                    const price = isProduct
-                      ? item.product?.price || 0
-                      : item.look?.price || item.look?.pricing?.total || item.look?.look_items?.reduce((s: number, li: any) => s + (li.products?.price || 0), 0) || 0
+                    let price = 0
+                    if (isProduct) {
+                      price = item.product?.price || 0
+                    } else {
+                      const basePrice = item.look?.look_items?.reduce((s: number, li: any) => s + (li.products?.price || 0), 0) || 0
+                      const discountPct = item.look?.discount || 0
+                      price = discountPct > 0 
+                        ? Math.round(basePrice * (1 - discountPct / 100) * 100) / 100 
+                        : basePrice
+                    }
 
                     const image = isProduct
-                      ? item.product?.image_url || item.product?.images?.[0] || '/placeholder.svg?height=150&width=150'
-                      : item.look?.model_image_url || '/placeholder.svg?height=150&width=150'
+                      ? item.product?.image_urls?.[0] || '/placeholder.svg?height=150&width=150'
+                      : item.look?.image_urls?.[0] || '/placeholder.svg?height=150&width=150'
 
                     const itemDisabled = isUpdating === item.id
 

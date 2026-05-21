@@ -399,7 +399,7 @@ export default function OutfitsPage() {
                     occasion={outfit.categories?.name || 'Outfit'}
                     season={outfit.categories?.name || ''}
                     genderBadge={outfit.gender}
-                    image={outfit.model_image_url}
+                    image={outfit.image_urls?.[0] || '/placeholder.svg'}
                     rating={5.0}
                     reviews={12}
                     isFavorited={favoriteIds.includes(outfit.id)}

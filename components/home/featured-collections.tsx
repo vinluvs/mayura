@@ -51,7 +51,7 @@ export function FeaturedCollections() {
         name: item.title || item.name,
         price: item.price,
         occasion: item.categories?.name || 'Curated',
-        image: item.model_image_url,
+        image: item.image_urls?.[0],
         rating: 4.9,
       }
     }

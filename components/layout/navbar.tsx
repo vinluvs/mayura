@@ -4,30 +4,19 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Menu, X, ShoppingBag, User } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useUser } from '@/hooks/use-user'
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
-  const [user, setUser] = useState<any>(null)
   const [cartCount, setCartCount] = useState(0)
   const router = useRouter()
   const supabase = createClient()
-
-  useEffect(() => {
-    const getUser = async () => {
-      if (!supabase) {
-        console.warn('[v0] Supabase not configured')
-        return
-      }
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        setUser(user)
-      } catch (error) {
-        console.warn('[v0] Error fetching user:', error)
-      }
-    }
-    getUser()
-  }, [supabase])
+  
+  const { session, profile } = useUser()
+  const user = session?.user
+  
+  const isAdminUser = profile?.role === 'admin' || profile?.role === 'developer' || profile?.role === 'owner'
 
   const handleLogout = async () => {
     if (!supabase) return
@@ -36,7 +25,6 @@ export function Navbar() {
     } catch (error) {
       console.warn('[v0] Error signing out:', error)
     }
-    setUser(null)
     router.push('/')
     setIsOpen(false)
   }
@@ -70,6 +58,11 @@ export function Navbar() {
             <Link href="/contact" className="text-sm tracking-wide hover:text-accent transition-colors">
               CONTACT
             </Link>
+            {isAdminUser && (
+              <Link href="/admin/dashboard" className="text-sm tracking-wide text-accent font-medium hover:text-accent/80 transition-colors">
+                ADMIN PANEL
+              </Link>
+            )}
           </div>
 
           {/* Right Side Icons */}
@@ -126,6 +119,11 @@ export function Navbar() {
             <Link href="/contact" className="block text-sm tracking-wide hover:text-accent transition-colors py-2">
               CONTACT
             </Link>
+            {isAdminUser && (
+              <Link href="/admin/dashboard" className="block text-sm tracking-wide text-accent font-medium hover:text-accent/80 transition-colors py-2">
+                ADMIN PANEL
+              </Link>
+            )}
             {user ? (
               <>
                 <Link href="/account/dashboard" className="block text-sm tracking-wide hover:text-accent transition-colors py-2">

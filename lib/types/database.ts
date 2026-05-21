@@ -10,7 +10,7 @@ export interface Database {
           email: string
           full_name: string | null
           phone: string | null
-          role: 'customer' | 'admin'
+          role: 'customer' | 'admin' | 'developer' | 'owner'
           status: string
           profile_image_url: string | null
           addresses: any[] // JSON array of address objects
@@ -22,7 +22,7 @@ export interface Database {
           email: string
           full_name?: string | null
           phone?: string | null
-          role?: 'customer' | 'admin'
+          role?: 'customer' | 'admin' | 'developer' | 'owner'
           status?: string
           profile_image_url?: string | null
           addresses?: any[] | null
@@ -33,7 +33,7 @@ export interface Database {
           email?: string
           full_name?: string | null
           phone?: string | null
-          role?: 'customer' | 'admin'
+          role?: 'customer' | 'admin' | 'developer' | 'owner'
           status?: string
           profile_image_url?: string | null
           addresses?: any[] | null
@@ -46,8 +46,7 @@ export interface Database {
           name: string
           description: string | null
           price: number
-          discount_percentage: number | null
-          image_url: string
+          image_urls: string[] | null
           category_id: string
           size_options: string[] | null
           color_options: string[] | null
@@ -61,8 +60,7 @@ export interface Database {
           name: string
           description?: string | null
           price: number
-          discount_percentage?: number | null
-          image_url: string
+          image_urls?: string[] | null
           category_id: string
           size_options?: string[] | null
           color_options?: string[] | null
@@ -75,8 +73,7 @@ export interface Database {
           name?: string
           description?: string | null
           price?: number
-          discount_percentage?: number | null
-          image_url?: string
+          image_urls?: string[] | null
           category_id?: string
           size_options?: string[] | null
           color_options?: string[] | null
@@ -92,10 +89,11 @@ export interface Database {
           title: string
           description: string | null
           category_id: string
-          model_image_url: string
+          image_urls: string[] | null
           background_color: string
           gender: string | null
           featured: boolean
+          discount: number
           created_at: string
           updated_at: string
         }
@@ -105,10 +103,11 @@ export interface Database {
           title: string
           description?: string | null
           category_id: string
-          model_image_url: string
+          image_urls?: string[] | null
           background_color?: string
           gender?: string | null
           featured?: boolean
+          discount?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -117,10 +116,11 @@ export interface Database {
           title?: string
           description?: string | null
           category_id?: string
-          model_image_url?: string
+          image_urls?: string[] | null
           background_color?: string
           gender?: string | null
           featured?: boolean
+          discount?: number | null
           updated_at?: string
         }
       }

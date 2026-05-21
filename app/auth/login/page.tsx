@@ -37,7 +37,7 @@ export default function Page() {
     }
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
         options: {
@@ -49,7 +49,12 @@ export default function Page() {
       if (error) throw error
       
       const searchParams = new URLSearchParams(window.location.search)
-      const redirectPath = searchParams.get('redirect') || '/account/dashboard'
+      let redirectPath = searchParams.get('redirect') || '/account/dashboard'
+
+      if (data?.user) {
+        // Normal redirection after login
+      }
+
       router.push(redirectPath)
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')

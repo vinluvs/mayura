@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { LayoutWrapper } from '@/components/layout/layout-wrapper'
-import { BarChart3, Package, ShoppingBag, Users, LogOut, Menu, X, Loader2, Plus, Eye, DollarSign } from 'lucide-react'
+import { BarChart3, Package, ShoppingBag, Users, LogOut, Menu, X, Loader2, Plus, Eye, DollarSign, Edit, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -17,12 +17,240 @@ export default function AdminDashboard() {
   const router = useRouter()
   const supabase = createClient()
 
-  const { products, isLoading: isProductsLoading } = useProducts()
-  const { looks, isLoading: isLooksLoading } = useLooks()
+  const { products, isLoading: isProductsLoading, mutate: mutateProducts } = useProducts()
+  const { looks, isLoading: isLooksLoading, mutate: mutateLooks } = useLooks()
 
   const [orders, setOrders] = useState<any[]>([])
   const [customers, setCustomers] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
   const [isDataLoading, setIsDataLoading] = useState(true)
+
+  // Editing state for products
+  const [editingProduct, setEditingProduct] = useState<any | null>(null)
+  const [prodForm, setProdForm] = useState({
+    name: '',
+    description: '',
+    price: 0,
+    image_urls: '', // Comma-separated
+    category_id: '',
+    size_options: '', // Comma-separated
+    color_options: '', // Comma-separated
+    gender: 'Unisex',
+    in_stock: true,
+  })
+
+  // Editing state for looks
+  const [editingLook, setEditingLook] = useState<any | null>(null)
+  const [lookForm, setLookForm] = useState({
+    name: '',
+    title: '',
+    description: '',
+    category_id: '',
+    image_urls: '', // Comma-separated
+    background_color: '#f5f5f5',
+    gender: 'Unisex',
+    featured: false,
+    discount: 0,
+  })
+
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  const handleEditProduct = (prod: any) => {
+    setEditingProduct(prod)
+    setProdForm({
+      name: prod.name || '',
+      description: prod.description || '',
+      price: prod.price || 0,
+      image_urls: prod.image_urls ? prod.image_urls.join(', ') : '',
+      category_id: prod.category_id || '',
+      size_options: prod.size_options ? prod.size_options.join(', ') : '',
+      color_options: prod.color_options ? prod.color_options.join(', ') : '',
+      gender: prod.gender || 'Unisex',
+      in_stock: prod.in_stock ?? true,
+    })
+    setSaveError(null)
+  }
+
+  const handleCreateProduct = () => {
+    setEditingProduct({ id: 'new' })
+    setProdForm({
+      name: '',
+      description: '',
+      price: 0,
+      image_urls: '',
+      category_id: categories[0]?.id || '',
+      size_options: 'S, M, L, XL',
+      color_options: 'Black, White',
+      gender: 'Unisex',
+      in_stock: true,
+    })
+    setSaveError(null)
+  }
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingProduct) return
+    setIsSaving(true)
+    setSaveError(null)
+
+    const imageUrlsArray = prodForm.image_urls
+      ? prodForm.image_urls.split(',').map(s => s.trim()).filter(Boolean)
+      : []
+    const sizeOptionsArray = prodForm.size_options
+      ? prodForm.size_options.split(',').map(s => s.trim()).filter(Boolean)
+      : []
+    const colorOptionsArray = prodForm.color_options
+      ? prodForm.color_options.split(',').map(s => s.trim()).filter(Boolean)
+      : []
+
+    try {
+      const payload = {
+        name: prodForm.name,
+        description: prodForm.description || null,
+        price: Number(prodForm.price),
+        image_urls: imageUrlsArray.length > 0 ? imageUrlsArray : null,
+        category_id: prodForm.category_id,
+        size_options: sizeOptionsArray.length > 0 ? sizeOptionsArray : null,
+        color_options: colorOptionsArray.length > 0 ? colorOptionsArray : null,
+        gender: prodForm.gender || null,
+        in_stock: prodForm.in_stock,
+      }
+
+      if (editingProduct.id === 'new') {
+        const { error } = await supabase
+          .from('products')
+          .insert([payload])
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('products')
+          .update({ ...payload, updated_at: new Date().toISOString() })
+          .eq('id', editingProduct.id)
+        if (error) throw error
+      }
+
+      await mutateProducts()
+      setEditingProduct(null)
+    } catch (err: any) {
+      console.error('Error saving product:', err)
+      setSaveError(err.message || 'Failed to save product.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) return
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      await mutateProducts()
+    } catch (err: any) {
+      console.error('Error deleting product:', err)
+      alert(`Failed to delete product: ${err.message || 'Unknown error'}`)
+    }
+  }
+
+  const handleEditLook = (look: any) => {
+    setEditingLook(look)
+    setLookForm({
+      name: look.name || '',
+      title: look.title || '',
+      description: look.description || '',
+      category_id: look.category_id || '',
+      image_urls: look.image_urls ? look.image_urls.join(', ') : '',
+      background_color: look.background_color || '#f5f5f5',
+      gender: look.gender || 'Unisex',
+      featured: look.featured || false,
+      discount: look.discount || 0,
+    })
+    setSaveError(null)
+  }
+
+  const handleCreateLook = () => {
+    setEditingLook({ id: 'new' })
+    setLookForm({
+      name: '',
+      title: '',
+      description: '',
+      category_id: categories[0]?.id || '',
+      image_urls: '',
+      background_color: '#f5f5f5',
+      gender: 'Unisex',
+      featured: false,
+      discount: 0,
+    })
+    setSaveError(null)
+  }
+
+  const handleSaveLook = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingLook) return
+    setIsSaving(true)
+    setSaveError(null)
+
+    const imageUrlsArray = lookForm.image_urls
+      ? lookForm.image_urls.split(',').map(s => s.trim()).filter(Boolean)
+      : []
+
+    try {
+      const payload = {
+        name: lookForm.name,
+        title: lookForm.title,
+        description: lookForm.description || null,
+        category_id: lookForm.category_id,
+        image_urls: imageUrlsArray.length > 0 ? imageUrlsArray : null,
+        background_color: lookForm.background_color,
+        gender: lookForm.gender || null,
+        featured: lookForm.featured,
+        discount: Number(lookForm.discount),
+      }
+
+      if (editingLook.id === 'new') {
+        const { error } = await supabase
+          .from('looks')
+          .insert([payload])
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('looks')
+          .update({ ...payload, updated_at: new Date().toISOString() })
+          .eq('id', editingLook.id)
+        if (error) throw error
+      }
+
+      await mutateLooks()
+      setEditingLook(null)
+    } catch (err: any) {
+      console.error('Error saving look:', err)
+      setSaveError(err.message || 'Failed to save look.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDeleteLook = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this look? This action cannot be undone.')) return
+    try {
+      const { error } = await supabase
+        .from('looks')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      await mutateLooks()
+    } catch (err: any) {
+      console.error('Error deleting look:', err)
+      alert(`Failed to delete look: ${err.message || 'Unknown error'}`)
+    }
+  }
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -36,6 +264,16 @@ export default function AdminDashboard() {
 
         if (!ordersError && ordersData) {
           setOrders(ordersData)
+        }
+
+        // Fetch all categories
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('categories')
+          .select('*')
+          .order('name', { ascending: true })
+
+        if (!categoriesError && categoriesData) {
+          setCategories(categoriesData)
         }
 
         // Fetch users/customers safely to avoid possible policy recursion errors
@@ -112,7 +350,7 @@ export default function AdminDashboard() {
       name: look.title || look.name || 'Exclusive Ensemble',
       sales: derivedSales,
       revenue,
-      image: look.model_image_url
+      image: look.image_urls?.[0] || '/placeholder.svg'
     }
   })
 
@@ -344,9 +582,17 @@ export default function AdminDashboard() {
                       <h1 className="text-3xl font-light tracking-widest text-foreground">PRODUCT INVENTORY</h1>
                       <p className="text-xs text-muted-foreground mt-1">Manage core boutique items, stock status, and categorization</p>
                     </div>
-                    <Link href="/outfits" className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent text-accent-foreground rounded-xl font-medium text-xs hover:shadow-md transition-all self-start sm:self-auto">
-                      <Plus className="w-4 h-4" /> Browse Catalog
-                    </Link>
+                    <div className="flex items-center gap-2 self-start sm:self-auto">
+                      <button
+                        onClick={handleCreateProduct}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent text-accent-foreground rounded-xl font-medium text-xs hover:shadow-md transition-all"
+                      >
+                        <Plus className="w-4 h-4" /> Add Product
+                      </button>
+                      <Link href="/outfits" className="inline-flex items-center gap-2 px-5 py-2.5 bg-secondary/80 text-foreground border border-border/50 rounded-xl font-medium text-xs hover:bg-secondary transition-all">
+                        <Eye className="w-4 h-4" /> Browse Catalog
+                      </Link>
+                    </div>
                   </div>
 
                   <div className="glass-sm rounded-2xl overflow-hidden border border-border/50">
@@ -371,7 +617,7 @@ export default function AdminDashboard() {
                               <tr key={prod.id} className="hover:bg-secondary/20 transition-colors">
                                 <td className="p-4 flex items-center gap-3">
                                   <div className="w-10 h-12 rounded-lg overflow-hidden bg-secondary shrink-0">
-                                    <img src={prod.image_url || '/placeholder.svg'} alt={prod.name} className="w-full h-full object-cover" />
+                                    <img src={prod.image_urls?.[0] || '/placeholder.svg'} alt={prod.name} className="w-full h-full object-cover" />
                                   </div>
                                   <div className="min-w-0">
                                     <p className="font-medium text-foreground truncate">{prod.name}</p>
@@ -386,8 +632,22 @@ export default function AdminDashboard() {
                                     {prod.in_stock ? 'In Stock' : 'Out of Stock'}
                                   </span>
                                 </td>
-                                <td className="p-4 text-right">
-                                  <Link href={`/outfits`} className="p-2 inline-flex items-center justify-center text-muted-foreground hover:text-accent transition-colors rounded-lg hover:bg-secondary/60">
+                                <td className="p-4 text-right space-x-1">
+                                  <button
+                                    onClick={() => handleEditProduct(prod)}
+                                    className="p-2 inline-flex items-center justify-center text-muted-foreground hover:text-accent transition-colors rounded-lg hover:bg-secondary/60"
+                                    title="Edit Product"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteProduct(prod.id)}
+                                    className="p-2 inline-flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors rounded-lg hover:bg-secondary/60"
+                                    title="Delete Product"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                  <Link href={`/outfits`} className="p-2 inline-flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary/60" title="Inspect Catalog">
                                     <Eye className="w-4 h-4" />
                                   </Link>
                                 </td>
@@ -409,9 +669,17 @@ export default function AdminDashboard() {
                       <h1 className="text-3xl font-light tracking-widest text-foreground">CURATED LOOKS</h1>
                       <p className="text-xs text-muted-foreground mt-1">Review combined designer sets and assigned core look products</p>
                     </div>
-                    <Link href="/outfits" className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent text-accent-foreground rounded-xl font-medium text-xs hover:shadow-md transition-all self-start sm:self-auto">
-                      <Plus className="w-4 h-4" /> View Showcase
-                    </Link>
+                    <div className="flex items-center gap-2 self-start sm:self-auto">
+                      <button
+                        onClick={handleCreateLook}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent text-accent-foreground rounded-xl font-medium text-xs hover:shadow-md transition-all"
+                      >
+                        <Plus className="w-4 h-4" /> Add Look
+                      </button>
+                      <Link href="/outfits" className="inline-flex items-center gap-2 px-5 py-2.5 bg-secondary/80 text-foreground border border-border/50 rounded-xl font-medium text-xs hover:bg-secondary transition-all">
+                        <Eye className="w-4 h-4" /> View Showcase
+                      </Link>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -423,7 +691,7 @@ export default function AdminDashboard() {
                       looks.map((look) => (
                         <div key={look.id} className="glass-sm rounded-2xl overflow-hidden flex flex-col justify-between group border border-border/40 hover:border-accent/30 transition-all duration-300">
                           <div className="relative aspect-3/4 w-full bg-secondary overflow-hidden">
-                            <img src={look.model_image_url || '/placeholder.svg'} alt={look.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <img src={look.image_urls?.[0] || '/placeholder.svg'} alt={look.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                             {look.featured && (
                               <span className="absolute top-3 left-3 px-2.5 py-1 bg-background/80 backdrop-blur-md text-foreground rounded-md text-[9px] tracking-widest uppercase font-medium">
                                 Featured
@@ -439,9 +707,22 @@ export default function AdminDashboard() {
                               <h3 className="text-sm font-semibold text-foreground truncate mb-1">{look.title || look.name}</h3>
                               <p className="text-xs text-muted-foreground line-clamp-2 font-light">{look.description || 'Exquisitely styled complete outfit combination.'}</p>
                             </div>
-                            <div className="mt-4 pt-3 border-t border-border/30 flex items-center justify-between">
-                              <span className="text-[11px] text-muted-foreground">Contains dynamic items</span>
-                              <Link href={`/outfits/${look.id}`} className="text-xs font-medium text-accent hover:underline">Inspect Look →</Link>
+                            <div className="mt-4 pt-3 border-t border-border/30 flex items-center justify-between gap-2 flex-wrap">
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={() => handleEditLook(look)}
+                                  className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+                                >
+                                  <Edit className="w-3.5 h-3.5" /> Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteLook(look.id)}
+                                  className="inline-flex items-center gap-1 text-xs font-medium text-red-500 hover:underline"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                                </button>
+                              </div>
+                              <Link href={`/outfits/${look.id}`} className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline">Inspect Look →</Link>
                             </div>
                           </div>
                         </div>
@@ -597,6 +878,340 @@ export default function AdminDashboard() {
           )}
         </div>
       </div>
+
+      {/* Product Edit/Create Modal */}
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md overflow-y-auto">
+          <div className="glass-sm w-full max-w-2xl rounded-3xl border border-border/50 p-6 md:p-8 space-y-6 my-8">
+            <div className="flex justify-between items-center border-b border-border/40 pb-4">
+              <h2 className="text-xl font-light tracking-wider text-foreground">
+                {editingProduct.id === 'new' ? 'ADD NEW PRODUCT' : 'EDIT PRODUCT'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setEditingProduct(null)}
+                className="p-2 hover:bg-secondary/80 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {saveError && (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl text-xs">
+                {saveError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProduct} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Product Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={prodForm.name}
+                    onChange={(e) => setProdForm({ ...prodForm, name: e.target.value })}
+                    className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors"
+                    placeholder="E.g. Linen Kurta"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Category</label>
+                  <select
+                    required
+                    value={prodForm.category_id}
+                    onChange={(e) => setProdForm({ ...prodForm, category_id: e.target.value })}
+                    className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors"
+                  >
+                    <option value="" disabled className="bg-popover text-foreground">Select Category</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id} className="bg-popover text-foreground">{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Description</label>
+                <textarea
+                  value={prodForm.description}
+                  onChange={(e) => setProdForm({ ...prodForm, description: e.target.value })}
+                  className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors min-h-[80px]"
+                  placeholder="Premium handcrafted description..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Price ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={prodForm.price || ''}
+                    onChange={(e) => setProdForm({ ...prodForm, price: parseFloat(e.target.value) || 0 })}
+                    className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors"
+                    placeholder="299.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Gender</label>
+                  <select
+                    value={prodForm.gender}
+                    onChange={(e) => setProdForm({ ...prodForm, gender: e.target.value })}
+                    className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors"
+                  >
+                    <option value="Male" className="bg-popover text-foreground">Male</option>
+                    <option value="Female" className="bg-popover text-foreground">Female</option>
+                    <option value="Unisex" className="bg-popover text-foreground">Unisex</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Stock Status</label>
+                <div className="flex items-center h-10 mt-1">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={prodForm.in_stock}
+                      onChange={(e) => setProdForm({ ...prodForm, in_stock: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-secondary peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                    <span className="ml-3 text-xs text-foreground">{prodForm.in_stock ? 'In Stock' : 'Out of Stock'}</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1 font-medium">Product Image URLs (Comma-separated, first is main)</label>
+                <span className="block text-[10px] text-muted-foreground mb-1.5">Provide a list of absolute URLs for alternative angles and product shots</span>
+                <textarea
+                  required
+                  value={prodForm.image_urls}
+                  onChange={(e) => setProdForm({ ...prodForm, image_urls: e.target.value })}
+                  className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors min-h-[60px]"
+                  placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Size Options (Comma-separated)</label>
+                  <input
+                    type="text"
+                    value={prodForm.size_options}
+                    onChange={(e) => setProdForm({ ...prodForm, size_options: e.target.value })}
+                    className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors"
+                    placeholder="S, M, L, XL"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Color Options (Comma-separated)</label>
+                  <input
+                    type="text"
+                    value={prodForm.color_options}
+                    onChange={(e) => setProdForm({ ...prodForm, color_options: e.target.value })}
+                    className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors"
+                    placeholder="Black, White, Cream"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-border/40">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="px-5 py-2.5 bg-secondary/60 text-foreground hover:bg-secondary rounded-xl text-xs font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 bg-accent text-accent-foreground hover:shadow-md rounded-xl text-xs font-semibold transition-all inline-flex items-center gap-2"
+                >
+                  {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Save Product
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Look Edit/Create Modal */}
+      {editingLook && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md overflow-y-auto">
+          <div className="glass-sm w-full max-w-2xl rounded-3xl border border-border/50 p-6 md:p-8 space-y-6 my-8">
+            <div className="flex justify-between items-center border-b border-border/40 pb-4">
+              <h2 className="text-xl font-light tracking-wider text-foreground">
+                {editingLook.id === 'new' ? 'ADD NEW CURATED LOOK' : 'EDIT CURATED LOOK'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setEditingLook(null)}
+                className="p-2 hover:bg-secondary/80 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {saveError && (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl text-xs">
+                {saveError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveLook} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Look Name (Slug/Unique Code)</label>
+                  <input
+                    type="text"
+                    required
+                    value={lookForm.name}
+                    onChange={(e) => setLookForm({ ...lookForm, name: e.target.value })}
+                    className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors"
+                    placeholder="E.g. royal-heritage"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Display Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={lookForm.title}
+                    onChange={(e) => setLookForm({ ...lookForm, title: e.target.value })}
+                    className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors"
+                    placeholder="E.g. Royal Heritage Sherwani Set"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Category</label>
+                  <select
+                    required
+                    value={lookForm.category_id}
+                    onChange={(e) => setLookForm({ ...lookForm, category_id: e.target.value })}
+                    className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors"
+                  >
+                    <option value="" disabled className="bg-popover text-foreground">Select Category</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id} className="bg-popover text-foreground">{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Gender</label>
+                  <select
+                    value={lookForm.gender}
+                    onChange={(e) => setLookForm({ ...lookForm, gender: e.target.value })}
+                    className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors"
+                  >
+                    <option value="Male" className="bg-popover text-foreground">Male</option>
+                    <option value="Female" className="bg-popover text-foreground">Female</option>
+                    <option value="Unisex" className="bg-popover text-foreground">Unisex</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Description</label>
+                <textarea
+                  value={lookForm.description}
+                  onChange={(e) => setLookForm({ ...lookForm, description: e.target.value })}
+                  className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors min-h-[80px]"
+                  placeholder="The design philosophy, pairing suggestions, and style essence..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Look Discount (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    required
+                    value={lookForm.discount}
+                    onChange={(e) => setLookForm({ ...lookForm, discount: parseInt(e.target.value) || 0 })}
+                    className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors"
+                    placeholder="E.g. 15"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Background Color (Hex/CSS)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={lookForm.background_color}
+                      onChange={(e) => setLookForm({ ...lookForm, background_color: e.target.value })}
+                      className="flex-1 bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors"
+                      placeholder="#f5f5f5"
+                    />
+                    <input
+                      type="color"
+                      value={lookForm.background_color.startsWith('#') && lookForm.background_color.length === 7 ? lookForm.background_color : '#ffffff'}
+                      onChange={(e) => setLookForm({ ...lookForm, background_color: e.target.value })}
+                      className="w-10 h-10 border border-border/50 rounded-xl cursor-pointer bg-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1 font-medium">Look Image URLs (Comma-separated, first is main)</label>
+                <span className="block text-[10px] text-muted-foreground mb-1.5">Provide a list of absolute URLs for alternative angles and outfit detailed close-ups</span>
+                <textarea
+                  required
+                  value={lookForm.image_urls}
+                  onChange={(e) => setLookForm({ ...lookForm, image_urls: e.target.value })}
+                  className="w-full bg-secondary/40 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-accent/60 outline-none transition-colors min-h-[60px]"
+                  placeholder="https://example.com/look1.jpg, https://example.com/look2.jpg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 font-medium">Featured Status</label>
+                <div className="flex items-center h-10">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={lookForm.featured}
+                      onChange={(e) => setLookForm({ ...lookForm, featured: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-secondary peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                    <span className="ml-3 text-xs text-foreground">{lookForm.featured ? 'Featured on Homepage' : 'Standard curation'}</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-border/40">
+                <button
+                  type="button"
+                  onClick={() => setEditingLook(null)}
+                  className="px-5 py-2.5 bg-secondary/60 text-foreground hover:bg-secondary rounded-xl text-xs font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 bg-accent text-accent-foreground hover:shadow-md rounded-xl text-xs font-semibold transition-all inline-flex items-center gap-2"
+                >
+                  {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Save Look
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

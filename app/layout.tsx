@@ -36,8 +36,8 @@ export default function RootLayout({
 
       '--font-playfair': playfair.style.fontFamily,
       '--font-lora': lora.style.fontFamily,
-    } as React.CSSProperties} suppressHydrationWarning>
-      <body className="font-sans antialiased bg-background text-foreground">
+    } as React.CSSProperties}>
+      <body className="font-sans antialiased bg-background text-foreground" suppressHydrationWarning>
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

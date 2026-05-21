@@ -50,8 +50,7 @@ Individual fashion items that exist only within looks.
 - `name` (text) - Product name
 - `description` (text) - Product description
 - `price` (numeric) - Base price
-- `discount_percentage` (int) - Discount if applicable
-- `image_url` (text) - Product image URL
+- `image_urls` (text[]) - Array of product image URLs
 - `category_id` (uuid, FK) - Reference to categories
 - `size_options` (text[]) - Available sizes (e.g., ['XS', 'S', 'M', 'L', 'XL'])
 - `color_options` (text[]) - Available colors
@@ -74,10 +73,11 @@ Collections of products forming complete fashion looks.
 - `title` (text) - Display title
 - `description` (text) - Look description
 - `category_id` (uuid, FK) - Reference to categories
-- `model_image_url` (text) - Hero image showing the complete look
+- `image_urls` (text[]) - Array of look image URLs showing the complete look
 - `background_color` (text, DEFAULT: '#F5F5F0')
 - `gender` (text) - Gender category ('Male', 'Female', 'Unisex')
 - `featured` (boolean) - Whether look is featured on home page
+- `discount` (int, DEFAULT: 0) - Discount percentage applied if all outfit items are selected
 - `created_at`, `updated_at` (timestamps)
 
 **RLS Policies:**

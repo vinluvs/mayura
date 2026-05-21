@@ -15,7 +15,7 @@ A sophisticated fashion e-commerce platform showcasing curated outfit collection
 - **Glassmorphic Design**: Premium UI with backdrop blur effects and gold accents
 - **Role-Based Access**: Customer and admin accounts with separate dashboards
 - **Complete E-Commerce**: Shopping cart, checkout, order tracking, favorites
-- **Admin Management**: Full control over products, outfits, orders, and analytics
+- **Admin Management**: Full control over products, outfits, orders, and analytics, backed by real-time data fetching
 
 ## 🛠️ Tech Stack
 
@@ -24,7 +24,7 @@ A sophisticated fashion e-commerce platform showcasing curated outfit collection
 - **Database**: Supabase PostgreSQL with RLS policies
 - **Styling**: Tailwind CSS with custom glassmorphic components
 - **Storage**: Vercel Blob (for product images)
-- **Payments**: Razorpay integration (configured, awaiting API setup)
+- **Payments**: Razorpay integration for secure checkout
 - **Fonts**: Playfair Display (headings), Lora (body)
 - **Icons**: Lucide React
 
@@ -51,7 +51,8 @@ app/
 │   ├── login/page.tsx               # Login page
 │   ├── sign-up/page.tsx             # Registration page
 │   └── callback/route.ts            # Auth callback handler
-├── auth/callback/route.ts           # Supabase auth callback
+├── api/
+│   └── checkout/razorpay/           # Razorpay order creation and verification routes
 └── globals.css                      # Glassmorphic theme with design tokens
 
 components/
@@ -106,6 +107,8 @@ middleware.ts                        # Auth session refresh
 - **outfit_reviews**: Customer reviews with ratings
 - **payments**: Razorpay transaction records
 
+*For detailed schema definitions, please review `DATABASE_SCHEMA.md` and `MIGRATION_SUMMARY.md`.*
+
 ### RLS Policies
 - Customers: View public outfits/products, manage own cart/orders/favorites
 - Admins: Full access to all resources
@@ -130,6 +133,7 @@ pnpm install
 # NEXT_PUBLIC_SUPABASE_URL=your_url
 # NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key
 # NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL=http://localhost:3000/auth/callback
+# SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 # RAZORPAY_KEY_ID=your_key
 # RAZORPAY_KEY_SECRET=your_secret
 
@@ -139,9 +143,13 @@ pnpm dev
 # Open http://localhost:3000
 ```
 
-### Database Setup
+## 🔑 Demo Access
 
-The database schema needs to be applied to your Supabase project. Due to connection timeouts, the migration script is documented in the plan file. Apply the SQL schema to your Supabase database using their SQL editor.
+To experience the Admin Dashboard and features:
+- **Email:** `admin@mayura.com`
+- **Password:** `AdminPassword123!`
+
+Logging in with this account will redirect you to the general **Account Dashboard** (accessible to all authenticated users). Since this user is assigned the `admin` role, a **View Admin Panel** link will be displayed on the Account Dashboard and in the main navigation bar. Non-admin/developer/owner users will not see these links and are restricted from accessing `/admin` pages via route guard protection.
 
 ## 📋 Pages Built
 
@@ -162,10 +170,10 @@ The database schema needs to be applied to your Supabase project. Due to connect
 - ✅ **Auth Callback** (`/auth/callback`): Session handler
 
 ### Account Pages
-- ✅ **Account Dashboard** (`/account/dashboard`): Profile, orders, favorites, settings
+- ✅ **Account Dashboard** (`/account/dashboard`): Profile, dynamic order tracking, favorites, settings
 
 ### Admin Pages
-- ✅ **Admin Dashboard** (`/admin/dashboard`): Stats, orders, analytics (UI framework ready)
+- ✅ **Admin Dashboard** (`/admin/dashboard`): Live statistics, real-time order tracking, customer, and inventory management via Supabase
 
 ## 🔄 Supabase Integration
 
@@ -174,19 +182,15 @@ The project includes:
 - Session management with middleware
 - RLS policies for role-based access
 - User auto-creation trigger on signup
-- Proper error handling for auth flows
-
-**Note:** Database schema migration encountered timeout issues. Apply the migration SQL directly through Supabase dashboard.
+- Dynamic dashboard integrations
 
 ## 💳 Razorpay Integration
 
-Checkout page framework is ready with:
+Checkout page framework is fully operational with:
 - Multi-step checkout UI
 - Razorpay payment method selection
 - Order total calculation with shipping/tax
-- Security badges and encrypted messaging
-
-**TODO:** Connect to actual Razorpay API with webhook handling for order confirmation.
+- API endpoints configured for order creation and verification (`app/api/checkout/razorpay`)
 
 ## 🎯 Implementation Highlights
 
@@ -219,41 +223,14 @@ Checkout page framework is ready with:
 - Touch-friendly inputs
 - Responsive grid systems
 
-## 🔐 Security Features
-
-- Supabase RLS (Row Level Security) policies
-- HTTPS-only authentication
-- Secure session management
-- Protected admin routes
-- Input validation on forms
-- CSRF protection via Next.js
-
-## 📊 Sample Data
-
-The project includes sample data for:
-- 8+ outfit collections with varying prices and occasions
-- Detailed product specifications
-- Customer reviews and ratings
-- Order history examples
-- Admin analytics data
-
 ## 🚧 Next Steps & TODOs
-
-### Critical Path (Backend)
-1. Apply database schema migration to Supabase
-2. Configure Razorpay API keys and webhook handlers
-3. Implement cart state management (Zustand/Redux)
-4. Build API routes for cart, orders, and checkout
-5. Connect admin dashboard to database
 
 ### Feature Enhancements
 - Search functionality with filters
 - Advanced recommendation engine
 - Email notifications
-- Order status webhooks
-- Inventory management
+- Inventory management alerting
 - Seller dashboard (if multi-vendor needed)
-- Social sharing features
 - Size guide and fit recommendations
 
 ### Performance
